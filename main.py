@@ -143,14 +143,14 @@ async def handle_text_message(decoded, twilio_ws, sts_ws,streamsid, evaluation_q
 
 
 async def sts_sender(sts_ws, audio_queue):
-    print("sts_sender started")
+    print("sts_sender started", flush = True)
     while True:
         chunk = await audio_queue.get()
         await sts_ws.send(chunk)
 
 
 async def sts_receiver(sts_ws, twilio_ws, streamsid_queue, evaluation_queue, caller_number_queue):
-    print("sts_receiver started")
+    print("sts_receiver started", flush = True)
     streamsid = await streamsid_queue.get()
     caller_number = await caller_number_queue.get()
     
@@ -244,7 +244,7 @@ async def main():
         host="0.0.0.0",
         port=port,
     )
-    print(f"Started Server on 0.0.0.0: {port}")
+    print(f"Started Server on 0.0.0.0: {port}", flush = True)
     await asyncio.Future()
     
     
