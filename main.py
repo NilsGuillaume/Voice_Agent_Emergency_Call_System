@@ -67,7 +67,7 @@ async def eval_queue_manager(evaluation_queue):
                 )
             
         except Exception as e:
-            print(f"Eval. Queue Manager Error: {e}")
+            print(f"Eval. Queue Manager Error: {e}", flush = True)
             
         finally:
             evaluation_queue.task_done()
@@ -88,7 +88,7 @@ async def execute_function_call(func_name, arguments, streamsid, evaluation_queu
         
         if func_name == 'note_emergency_description':
             evaluation_queue.put_nowait(streamsid)
-        print(f"Function Call results {result}")
+        print(f"Function Call results {result}", flush = True)
         return result
     
     else: 
@@ -103,7 +103,7 @@ async def handle_function_call_request(decoded,sts_ws,streamsid, evaluation_queu
             func_id = function_call['id']
             arguments = json.loads(function_call['arguments'])
             
-            print(f"function_call: {func_name}, ID: {func_id}")
+            print(f"function_call: {func_name}, ID: {func_id}", flush = True)
             
             result = await execute_function_call(func_name, arguments, streamsid, evaluation_queue)
 
@@ -115,10 +115,10 @@ async def handle_function_call_request(decoded,sts_ws,streamsid, evaluation_queu
             }
             
             await sts_ws.send(json.dumps(function_result))  
-            print(f"Function call results has been sent to Deepgram. Result {function_result}")           
+            print(f"Function call results has been sent to Deepgram. Result {function_result}", flush = True)           
                                              
     except Exception as e:
-        print(f"Error function call: {e}")  
+        print(f"Error function call: {e}", flush = True)  
         func_id_e = func_id if "func_id" in locals() else "unknown"
         func_name_e = func_name if "func_id" in locals() else "unknown"
         error = f"Function call failed with {str(e)}"
@@ -132,7 +132,7 @@ async def handle_function_call_request(decoded,sts_ws,streamsid, evaluation_queu
         } 
         
         await sts_ws.send(json.dumps(error_result))
-        print(f"Function call error results has been sent to Deepgram. Result {error_result}")           
+        print(f"Function call error results has been sent to Deepgram. Result {error_result}", flush = True)           
     
 
 async def handle_text_message(decoded, twilio_ws, sts_ws,streamsid, evaluation_queue):
@@ -158,7 +158,7 @@ async def sts_receiver(sts_ws, twilio_ws, streamsid_queue, evaluation_queue, cal
     
     async for message in sts_ws:
         if type(message) is str:
-            print(message)
+            print(message, flush = True)
             decoded = json.loads(message)
             await handle_text_message(decoded, twilio_ws, sts_ws, streamsid, evaluation_queue)
             continue
@@ -184,7 +184,7 @@ async def twilio_receiver(twilio_ws, audio_queue, streamsid_queue, caller_number
             event = data['event']
             
             if event == "start":
-                print("get our streamsid")
+                print("get our streamsid", flush = True)
                 start = data['start']
                 streamsid = start['streamSid']
                 streamsid_queue.put_nowait(streamsid)
