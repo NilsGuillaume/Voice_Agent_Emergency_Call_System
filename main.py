@@ -17,16 +17,6 @@ import logging
 
 import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
-
-# Now silence ONLY websockets noise
-logging.getLogger("websockets.server").setLevel(logging.ERROR)
-logging.getLogger("websockets.protocol").setLevel(logging.ERROR)
-logging.getLogger("websockets.asyncio.server").setLevel(logging.ERROR)
-
 
 load_dotenv()
 DEEPGRAM_API = os.getenv("DEEPGRAM_API_KEY")
