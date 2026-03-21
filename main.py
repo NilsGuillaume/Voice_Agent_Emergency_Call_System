@@ -12,8 +12,14 @@ from agent_functions import location_verifier
 from agent_functions import note_emergency_description
 
 from triage_system import main_call_update_esi
-
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("websockets.server").setLevel(logging.CRITICAL)
+logging.getLogger("websockets.protocol").setLevel(logging.CRITICAL)
+logging.getLogger("websockets.asyncio.server").setLevel(logging.CRITICAL)
+
 
 load_dotenv()
 DEEPGRAM_API = os.getenv("DEEPGRAM_API_KEY")
