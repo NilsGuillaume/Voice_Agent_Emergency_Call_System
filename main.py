@@ -16,6 +16,11 @@ import os
 import logging
 
 
+import logging
+logging.getLogger("websockets.server").setLevel(logging.CRITICAL)
+logging.getLogger("websockets.protocol").setLevel(logging.CRITICAL)
+logging.getLogger("websockets.asyncio.server").setLevel(logging.CRITICAL)
+
 load_dotenv()
 DEEPGRAM_API = os.getenv("DEEPGRAM_API_KEY")
 
