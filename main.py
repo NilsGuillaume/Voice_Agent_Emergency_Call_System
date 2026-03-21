@@ -246,9 +246,34 @@ async def twilio_handler(twilio_ws):
             await twilio_ws.close()
 
 
+async def process_request(path, request_headers):
+    # Handle Render health check
+    if path == "/healthz":
+        return (
+            200,
+            [("Content-Type", "application/json")],
+            b'{"status":"ok"}'
+        )
+
+    # Optionally handle root path to avoid spam
+    if path == "/":
+        return (
+            200,
+            [("Content-Type", "text/plain")],
+            b"OK"
+        )
+
+    # Otherwise: continue with WebSocket handshake
+    return None
+
 async def main():
     port = int(os.getenv("PORT","100000"))
-    await websockets.serve(twilio_handler, host = "0.0.0.0",port = port)
+    await websockets.serve(
+        twilio_handler,
+        host="0.0.0.0",
+        port=port,
+        process_request=process_request
+    )
     print(f"Started Server on 0.0.0.0: {port}")
     await asyncio.Future()
     
