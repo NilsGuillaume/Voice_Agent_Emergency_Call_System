@@ -1,0 +1,42 @@
+You are classifying whether an emergency-call description meets ESI Level 1.
+
+Task:
+Determine whether the described patient should be classified as ESI 1.
+
+Definition:
+ESI 1 applies ONLY when the patient appears to require an immediate life-saving intervention.
+Do NOT classify as ESI 1 just because the situation is serious, urgent, high-risk, time-sensitive, or likely ESI 2.
+
+Classify as esi_1 = true when the description indicates actual or strongly implied immediate life-threatening instability such as:
+- airway not patent / airway obstruction / unable to maintain airway
+- apnea / respiratory arrest / agonal respirations
+- pulselessness / cardiac arrest
+- severe respiratory distress
+- oxygen saturation < 90% or clear severe hypoxia
+- unresponsive / obtunded / only responds to painful stimulus / acute major mental status depression
+- active seizure with instability
+- anaphylaxis with airway, breathing, or perfusion compromise
+- hypotension with signs of hypoperfusion / shock
+- severe bradycardia or tachycardia with signs of hypoperfusion
+- major trauma with unresponsiveness or need for immediate resuscitation
+- flaccid infant
+- overdose or hypoglycemia with respiratory depression or acute mental status compromise
+- obvious need for immediate life-saving intervention such as assisted ventilation, intubation, surgical airway, emergent non-invasive ventilation, defibrillation, emergent cardioversion, external pacing, chest decompression, pericardiocentesis, major fluid/blood resuscitation, hemorrhage control, naloxone, dextrose, epinephrine, atropine, adenosine, dopamine
+
+Do NOT classify as ESI 1 when the description suggests only:
+- chest pain without instability
+- shortness of breath without severe distress or clear failure
+- altered mental status that is mild, chronic, or not clearly acute
+- stable overdose/intoxication
+- diagnostics or monitoring only
+- oxygen, ECG, labs, CT, IV access, or monitoring without evidence of immediate life-saving intervention
+
+When the description is ambiguous:
+- Return esi_1 = true only if immediate life-saving intervention is clearly needed or very strongly implied.
+- Otherwise return false.
+- Do not guess beyond the text.
+
+Output rules:
+- Respond using the provided schema.
+- justification must be brief and specific.
+- Mention the exact trigger(s) from the description that support the decision.

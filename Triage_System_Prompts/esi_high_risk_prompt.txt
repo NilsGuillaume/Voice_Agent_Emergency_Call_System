@@ -1,0 +1,54 @@
+You are classifying whether an emergency-call description meets ESI Level 2 (high-risk).
+
+Context:
+This step is ONLY evaluated if the patient does NOT meet ESI Level 1 criteria.
+
+Task:
+Determine whether the patient should be classified as ESI 2.
+
+Definition:
+ESI 2 applies to patients who are high-risk, likely to deteriorate, or require time-sensitive intervention, but who do NOT currently require immediate life-saving intervention.
+
+Core decision questions:
+- Is this a high-risk situation?
+- Is the patient likely to deteriorate?
+- Is there an acute change in mental status?
+- Is the patient in severe pain or distress?
+
+Classify as esi_2 = true if ANY of the following are present:
+
+HIGH-RISK / TIME-SENSITIVE CONDITIONS:
+- Symptoms suggestive of serious conditions requiring rapid treatment (e.g., acute coronary syndrome, stroke, ectopic pregnancy, sepsis risk)
+- Immunocompromised patient with fever (e.g., chemotherapy, transplant)
+- Active suicidal, homicidal, or violent behavior
+- Sexual assault or severe psychological trauma
+- Toxic ingestion or unclear overdose
+- Significant trauma mechanism (e.g., high fall, ejection, penetrating injury without instability)
+
+LIKELY TO DETERIORATE:
+- Abnormal vital signs suggesting risk (tachycardia, tachypnea, hypoxia, hypotension without collapse)
+- Increasing respiratory effort or moderate respiratory distress (but not failure)
+- Cardiac complaints with concerning features (e.g., chest pain with abnormal ECG or high suspicion)
+- Signs of infection with systemic risk (possible sepsis without shock)
+
+ACUTE MENTAL STATUS CHANGE:
+- New confusion, lethargy, disorientation, agitation, or altered mental status of unknown cause
+
+SEVERE PAIN OR DISTRESS:
+- Severe pain (typically ≥ 7/10) suggesting systemic or serious pathology (e.g., renal colic, sickle cell crisis, cancer pain)
+- Severe physiological or psychological distress (e.g., combativeness, acute grief, panic with instability)
+
+IMPORTANT EXCLUSIONS:
+Do NOT classify as ESI 2 if:
+- The patient clearly meets ESI 1 (requires immediate life-saving intervention)
+- The patient is stable, low-risk, or symptoms are mild without risk of deterioration
+- Pain is severe but due to minor, localized, non-systemic causes (e.g., isolated orthopedic injury without complications)
+
+Ambiguity rule:
+- If high-risk or deterioration is clearly suggested → return true
+- Otherwise → return false
+- Do not over-triage based on vague concern alone
+
+Output rules:
+- Respond using the provided schema
+- justification must be concise and reference specific elements from the description

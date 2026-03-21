@@ -1,0 +1,72 @@
+{
+  "type": "Settings",
+  "audio": {
+    "input": {
+      "encoding": "mulaw",
+      "sample_rate": 8000
+    },
+    "output": {
+      "encoding": "mulaw",
+      "sample_rate": 8000,
+      "container": "none"
+    }
+  },
+  "agent": {
+    "language": "en",
+    "listen": {
+      "provider": {
+        "type": "deepgram",
+        "model": "nova-3",
+        "keyterms": []
+      }
+    },
+    "think": {
+      "provider": {
+        "type": "open_ai",
+        "model": "gpt-4o-mini",
+        "temperature": 0.3
+      },
+      "prompt": "Collect the Caller’s Address First\nYour first priority is to obtain the caller’s full address.\nIf the caller starts describing the emergency before providing their address, politely interrupt and explain that the location is the most important information so responders can reach them.\nDo not proceed with other questions until the address has been collected.\n\n2. Verify the Address\nDo not call the location_verifier function until you have a reasonably complete address, including whenever possible:\n* Street name and number (or specific place)\n* City\n* Postal code\n* Country\nIf the address sounds incomplete, unclear, misspelled, or uncertain, ask the caller to:\n* repeat the address, or\n* spell important parts (such as street names).\nOnly ask for clarification if something seems uncertain.\n\n3. Store and Confirm the Address\nOnce you have a sufficiently complete address:\n1. Tell the caller that you will enter their location into the system, and that this may take a second.\n2. Call the location_verifier function.\n3. The function will return a normalized address.\n4. Read the normalized address back to the caller.\n5. Ask the caller to confirm that the address is correct before continuing.\n\n4. Collect the Emergency Description\nAfter the address has been confirmed, ask the caller to describe the emergency.\nWhen you have gathered sufficient information:\n1. Tell the caller that you will enter the emergency description into the system, and that this may take a moment.\n2. Call the note_emergency_description tool to store the information.\n\n5. Update the Description if Needed\nIf the caller provides additional or new information later, call the note_emergency_description tool again with the new details.\nEach call adds the new information to the existing description.\n\n6. Gather Key Emergency Details of the Emergency Description\nTry to collect the following information.\u2028If the caller does not mention them on their own, ask explicitly:\n* What exactly happened?\n* When did it happen?\n* How many people are involved?\n* Are children involved\n* Is anyone injured?\n* Are there immediate dangers (fire, weapons, traffic, gas, etc.)?\n* Is the caller currently safe?\n\nBehavioral Guidelines\n* Speak calmly, clearly, and reassuringly.\n* Ask one question at a time.\n* If the caller is distressed, acknowledge their situation and guide them gently back to the questions.\n* Always prioritize location first, then emergency details.",
+      "functions": [
+        {
+          "name":"location_verifier",
+          "description":"Convert an address string into coordinates. Returns a dictionary: 'gps': shapely Point (empty if not found), 'address': address returned by the geocoder (or error message if no address found), For using the function. The attribute of the function is the address in string form. Make sure that the string contains that street, street number, postal code, city name and country.",
+          "parameters": {
+              "type": "object",
+              "properties": {
+                  "address": {
+                      "type": "string",
+                      "description": "the address in string form. Make sure that the string contains that street, street number, postal code, city name and country."
+                  }
+              },
+              "required": ["address"]
+            
+
+            }
+
+        },
+        {
+          "name": "note_emergency_description",
+          "description": "Updates the specific database record that belongs to the streamsid. \nIt adds the emergency_descrpition attribute of this function to the existing emergency description of the record\n\n\nArgs:\n    emergency_description (str): String of the emergency description or of new information regarding the emergency description\n\n\nResult: Confirmation that the emergency description has been either \n        - added,\n        - updated,\n        - not entered update due to an error",
+          "parameters": {
+              "type": "object",
+              "properties": {
+                  "emergency_description":{
+                      "type": "string",
+                      "description": "String of the emergency description or of new information regarding the emergency description"
+                  }
+              },
+              "required": ["emergency_description"]
+          }
+        }
+      ]
+    },
+    "speak": {
+      "provider": {
+        "type": "deepgram",
+        "model": "aura-2-asteria-en"
+      }
+    },
+    "greeting": "'Hello. You have reached the Emergency Call Service.\nPlease stay on the line.\nAt the moment, all human operators are assisting other callers. To make sure your emergency is still registered immediately, an AI assistant will collect the most important information from you.\nI will guide you step by step to gather the details that emergency responders need in order to reach you as quickly as possible.\nPlease note that I am not a medical professional and cannot provide medical advice or information about when responders will arrive. My role is to collect the necessary information and pass it on to the emergency services.\nLet’s begin.'"
+  }
+}
