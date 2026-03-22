@@ -5,49 +5,40 @@ from db import update_emergency_description
 
 
 def location_verifier(streamsid: str, address: str):
-    
     error = None
-    for attempt in range(3):
-        try:
-            coord = gpd.tools.geocode(address)
+    point = None
+    normalized_address = address
 
-            if not coord.empty and not coord.geometry.iloc[0].is_empty:
-                point = coord.geometry.iloc[0]
-                normalized_address = coord.address.iloc[0]
+    try:
+        coord = gpd.tools.geocode(address)
 
-
-                
-
-        except Exception as e:
-            error = e
-            
-        update_location(streamsid, point.y, point.x, normalized_address)
-        
-        if error is None:
-            
-            update_location(streamsid, point.y, point.x, normalized_address)
-            return {
-                    "gps": {
-                        "lat": point.y,
-                        "lon": point.x
-                    },
-                    "address": normalized_address
-                }
-            
-            
-
+        if not coord.empty and not coord.geometry.iloc[0].is_empty:
+            point = coord.geometry.iloc[0]
+            normalized_address = coord.address.iloc[0]
         else:
-            update_location(streamsid, 0, 0, address)
-            
-            message = f"Not found after retries due to error: {error}"
-            return {
-                "gps": {
-                    "lat": None,
-                    "lon": None
-                },
-                "address": message
-            }
+            error = "No location found"
 
+    except Exception as e:
+        error = e
+
+    if error is None and point is not None:
+        update_location(streamsid, point.y, point.x, normalized_address)
+        return {
+            "gps": {
+                "lat": point.y,
+                "lon": point.x
+            },
+            "address": normalized_address
+        }
+    else:
+        update_location(streamsid, 0, 0, address)
+        return {
+            "gps": {
+                "lat": None,
+                "lon": None
+            },
+            "address": f"Not found due to error: {error}"
+        }
 
 def note_emergency_description(streamsid: str, emergency_description: str):
     """
