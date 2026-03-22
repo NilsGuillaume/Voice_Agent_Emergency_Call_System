@@ -4,11 +4,9 @@ from db import update_location
 from db import update_emergency_description
 
 
-
-
 def location_verifier(streamsid: str, address: str):
+    
     error = None
-
     for attempt in range(3):
         try:
             coord = gpd.tools.geocode(address)
@@ -17,33 +15,39 @@ def location_verifier(streamsid: str, address: str):
                 point = coord.geometry.iloc[0]
                 normalized_address = coord.address.iloc[0]
 
-                update_location(streamsid, point.y, point.x, normalized_address)
 
-                return {
+                
+
+        except Exception as e:
+            error = e
+            
+        update_location(streamsid, point.y, point.x, normalized_address)
+        
+        if error is None:
+            
+            update_location(streamsid, point.y, point.x, normalized_address)
+            return {
                     "gps": {
                         "lat": point.y,
                         "lon": point.x
                     },
                     "address": normalized_address
                 }
+            
+            
 
-        except Exception as e:
-            error = e
+        else:
+            update_location(streamsid, 0, 0, address)
+            
+            message = f"Not found after retries due to error: {error}"
+            return {
+                "gps": {
+                    "lat": None,
+                    "lon": None
+                },
+                "address": message
+            }
 
-    update_location(streamsid, None, None, address)
-
-    if error is not None:
-        message = f"Not found after retries due to error: {error}"
-    else:
-        message = "Not found after retries: geocoder returned no match"
-
-    return {
-        "gps": {
-            "lat": None,
-            "lon": None
-        },
-        "address": message
-    }
 
 def note_emergency_description(streamsid: str, emergency_description: str):
     """
