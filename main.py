@@ -142,58 +142,79 @@ async def handle_text_message(decoded, twilio_ws, sts_ws,streamsid, evaluation_q
         await handle_function_call_request(decoded,sts_ws, streamsid, evaluation_queue)
 
 
-async def sts_sender(sts_ws, audio_queue):
-    print("sts_sender started", flush = True)
-    while True:
-        chunk = await audio_queue.get()
-        await sts_ws.send(chunk)
 
 
 async def sts_receiver(sts_ws, twilio_ws, streamsid_queue, evaluation_queue, caller_number_queue):
-    print("sts_receiver started", flush = True)
-    streamsid = await streamsid_queue.get()
-    caller_number = await caller_number_queue.get()
-    
-    new_call_sql(streamsid, caller_number)
-    
-    async for message in sts_ws:
-        if type(message) is str:
-            print(message, flush = True)
-            decoded = json.loads(message)
-            await handle_text_message(decoded, twilio_ws, sts_ws, streamsid, evaluation_queue)
-            continue
+    try:
+        print("sts_receiver started", flush = True)
         
-        raw_mulaw = message
+        # await the streamid and caller_number from the queues & creates new db entry
+        streamsid = await streamsid_queue.get()  
+        caller_number = await caller_number_queue.get()
+        new_call_sql(streamsid, caller_number)
+        print(f"Add new entry in db for {caller_number}, with streamsid {streamsid}")
         
-        media_message = {
-            "event":"media",
-            "streamSid": streamsid,
-            "media": {"payload": base64.b64encode(raw_mulaw).decode("ascii")}
-        }
+        # continously listens for messages from deepgram via the sts websocket
+        # if it's text we use handle_text_message, if it's audio, we forward it to twilio with the streamsid attached
+        async for message in sts_ws:
+            if type(message) is str:
+                print(message, flush = True)
+                decoded = json.loads(message)
+                await handle_text_message(decoded, twilio_ws, sts_ws, streamsid, evaluation_queue) 
+                continue
+            
+            raw_mulaw = message
+            
+            media_message = {
+                "event":"media",
+                "streamSid": streamsid,
+                "media": {"payload": base64.b64encode(raw_mulaw).decode("ascii")}
+            }
+            
+            await twilio_ws.send(json.dumps(media_message))
+    except Exception as e:
+        print(f"sts_receiver error: {e}")
         
-        await twilio_ws.send(json.dumps(media_message))
-    
+
+async def sts_sender(sts_ws, audio_queue):
+    try:
+        # Contionously listens for chunks in the audioqueue
+        # once new chunks are added it forwards them to deepgram via the sts websocket
+        print("sts_sender started", flush = True)
+        while True:
+            chunk = await audio_queue.get()
+            await sts_ws.send(chunk)
+    except Exception as e:
+        print(f"sts_sender error: {e}")
+
 
 async def twilio_receiver(twilio_ws, audio_queue, streamsid_queue, caller_number_queue):
-    BUFFER_SIZE = 20 * 160
+    
+    # Buffer used to accumulate incoming audio data before forwarding
+    # Twilio sends small base64-encoded audio frames, which are combined
+    # into fixed-size chunks suitable for downstream processing
+    BUFFER_SIZE = 20 * 160                 
     inbuffer = bytearray(b"")
     
+    ## Processing the incoming information from the twilio websocket connection for the call
     async for message in twilio_ws:
         try:
             data = json.loads(message)
             event = data['event']
             
-            if event == "start":
+            if event == "start": 
+                # extract streamid and call_number and stores them in the respective queues
                 print("get our streamsid", flush = True)
                 start = data['start']
                 streamsid = start['streamSid']
-                streamsid_queue.put_nowait(streamsid)
+                streamsid_queue.put_nowait(streamsid)      
                 caller_number = data["start"]["customParameters"]["From"]
                 caller_number_queue.put_nowait(caller_number)
 
             elif event == "connected":
                 continue
-            elif event == "media":
+            elif event == "media":  
+                # adding audio data to buffer
                 media = data['media']
                 chunk = base64.b64decode(media['payload'])
                 if media["track"] == "inbound":
@@ -201,29 +222,34 @@ async def twilio_receiver(twilio_ws, audio_queue, streamsid_queue, caller_number
             elif event == "stop":
                 break
             
+            # breaking buffer into chunks that get forwarded to the audio_queue
             while len(inbuffer) >= BUFFER_SIZE:
                 chunk = inbuffer[:BUFFER_SIZE]
                 audio_queue.put_nowait(chunk)
                 inbuffer = inbuffer[BUFFER_SIZE:]
                 
-        except:
+        except Exception as e:
+            print(f"twilio_receiver_error: {e}")
             break
         
         
 async def twilio_handler(twilio_ws):
-    audio_queue = asyncio.Queue()
-    streamsid_queue = asyncio.Queue()
-    evaluation_queue = asyncio.Queue()
-    caller_number_queue = asyncio.Queue()
     
-    eval_queue_manager_task = asyncio.create_task(eval_queue_manager(evaluation_queue))
+    # creating queus that will be used for asynchronous programming between the tasks
     
-    async with sts_connect() as sts_ws:
+    audio_queue = asyncio.Queue()                # takes audio chunks from twilio to Deepgram
+    streamsid_queue = asyncio.Queue()            # twilio sends streamsid for each phone call, this will be used later to tell twilio to which caller it should return the audio
+    caller_number_queue = asyncio.Queue()        # for the the telophone number of the caller, will be stored later in the database
+    
+    evaluation_queue = asyncio.Queue()           
+    eval_queue_manager_task = asyncio.create_task(eval_queue_manager(evaluation_queue)) # the eval queue and manager task will be used later for integrating the triage system
+    
+    async with sts_connect() as sts_ws:          # this creates a websocket connection to the deepgram for the speech-to-speech
         config_message = load_config()
-        await sts_ws.send(json.dumps(config_message))
+        await sts_ws.send(json.dumps(config_message))    # sending the data of config.json to deepgram to set up the voice-agent
         
         try:
-            await asyncio.wait(
+            await asyncio.wait(                  # run the three asynchronous tasks concurrently
                 [
                     asyncio.ensure_future(sts_sender(sts_ws, audio_queue)),
                     asyncio.ensure_future(sts_receiver(sts_ws, twilio_ws, streamsid_queue, evaluation_queue, caller_number_queue)),
@@ -243,14 +269,17 @@ async def main():
         twilio_handler,
         host="0.0.0.0",
         port=port,
-    )
+    ) ## This start websocket-server | for each new phone call, new incoming twilio connection to the websocket that triggers twilio_handler
+
+    
+    
     print(f"Started Server on 0.0.0.0: {port}", flush = True)
-    await asyncio.Future()
+    await asyncio.Future() ## Ensures that main() never finishes => keeps server running indefinitely 
     
     
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    # websockets 14.0+? logs an error if a connection is opened and closed
+    # when using render.com to host the service, it logs errors
     # before data is sent. e.g. when platforms send HEAD requests.
     # Suppress these warnings.
     logging.getLogger("websockets.server").setLevel(logging.CRITICAL)
